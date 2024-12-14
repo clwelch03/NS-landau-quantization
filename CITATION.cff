@@ -1,0 +1,63 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: >-
+  Effects of Landau quantization on neutrino emission and
+  absorption
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Mia
+    family-names: Kumamoto
+    email: mialk@uw.edu
+    affiliation: Institute for Nuclear Theory
+    orcid: 'https://orcid.org/0009-0004-9515-9213'
+  - given-names: Catherine
+    family-names: Welch
+    email: clwelch@uw.edu
+    affiliation: University of Washington
+    orcid: 'https://orcid.org/0000-0002-1738-0463'
+identifiers:
+  - type: url
+    value: 'https://arxiv.org/abs/2412.02925'
+    description: arxiv url
+repository-code: 'https://github.com/clwelch03/NS-landau-quantization'
+abstract: >-
+  Some neutron stars known as magnetars possess very strong
+  magnetic fields, with surface fields as large as 10^15 G
+  and internal fields that are possibly stronger. Recent
+  observations of the radio pulsar GLEAM-X J1627 suggest it
+  may have a surface field as strong as 10^16 G. In the
+  presence of a strong magnetic field, the energy levels of
+  electrons and protons are quantized and the Direct Urca
+  process allows neutron stars to cool rapidly, even at low
+  density. For the case of magnetic fields B≥1016G, we find
+  features in the emissivity due to energy quantization that
+  are not captured by the frequently employed quasiclassical
+  approximation where energy levels are treated as nearly
+  continuous. Resonances can result in amplification of the
+  neutrino emissivity at specific densities compared to a
+  calculation that neglects quantization, particularly at
+  low temperature. These effects are not important for the
+  thermal evolution of an entire neutron star, but may be
+  relevant for phenomena that depend on behavior at specific
+  densities. We present a fully relativistic calculation of
+  the Direct Urca rate in a strong magnetic field using the
+  standard V-A weak Lagrangian incorporating mean field
+  nuclear effects and discuss approaches to the numerical
+  challenge the modified wavefunctions present and a new
+  semi-analytic approximation. These tools are also
+  applicable to calculating neutrino opacities in strong
+  magnetic fields in the ejecta of binary neutron star
+  mergers. We calculate the opacities for neutrinos
+  capturing on free nucleons at sub-saturation densities and
+  temperatures exceeding an MeV. We find an enhancement to
+  capture processes of the lowest energy neutrinos by an
+  order of magnitude or more due to suppression of electron
+  Pauli blocking in the case of capture on neutrons, and
+  from the effect of the nucleon magnetic moments in the
+  case of capture on protons.
+license: MIT
