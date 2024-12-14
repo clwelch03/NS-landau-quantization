@@ -1,0 +1,10 @@
+[deps]
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+HCubature = "19dc6840-f33b-545b-b366-655c7e3ffd49"
+Optim = "429524aa-4258-5aef-a3af-852621145aeb"
+PolyLog = "85e3b03c-9856-11eb-0374-4dc1f8670e7f"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+PyPlot = "d330b81b-6aea-500a-939a-2ce795aea3ee"
+QuadGK = "1fd47b50-473d-5c70-9696-f719f8f3bcdc"
+Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
+SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
