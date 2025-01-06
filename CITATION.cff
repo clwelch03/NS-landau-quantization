@@ -3,8 +3,7 @@
 
 cff-version: 1.2.0
 title: >-
-  Effects of Landau quantization on neutrino emission and
-  absorption
+  NS-landau-quantization
 message: >-
   If you use this software, please cite it using the
   metadata from this file.
