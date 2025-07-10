@@ -77,19 +77,19 @@ end
 Create a plot comparing emissivity at variable density and fixed B.
 """
 function emissivity_plot(B, T; mu_range=[950, 980], points=100,
-                                            include_MUrca=true,
-                                            include_BY=false,
-                                            include_new_LL=false,
-                                            log_plot=true,
-                                            mageos=true,
-                                            nuc_inter=true,
-                                            spin_split=true,
-                                            thermal_population=true, 
-                                            analytical_approx=false,
-                                            Mred_in_int=true,
-                                            refine_points=true,
-                                            debug_title_info=false,
-                                            return_data=true)
+                        include_MUrca=true,
+                        include_BY=false,
+                        include_new_LL=false,
+                        log_plot=true,
+                        mageos=true,
+                        nuc_inter=true,
+                        spin_split=true,
+                        thermal_population=true, 
+                        analytical_approx=false,
+                        Mred_in_int=true,
+                        refine_points=true,
+                        debug_title_info=false,
+                        return_data=true)
     
     B_str = @sprintf("%.2e", B) # gives us scientific notation
 
@@ -210,7 +210,7 @@ end
 
 
 """
-    rb_plot(k_Fn, kFp_range, B, temps, points, toys, log_plot)
+    rb_plot(x_range, B, temp, points; toys=false, analytical_approx=false, Mred_in_int=false)
 
 Create a plot comparing our R_B (at various `temps`) to the R_B from Baiko and Yakovlev (1999).
 
