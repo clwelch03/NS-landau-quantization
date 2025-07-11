@@ -1,4 +1,4 @@
-module Urca
+module Urca_old
 export rate_wrapper, emissivity_plot, rb_plot
 include("DirectUrca.jl")
 include("ModifiedUrca.jl")
@@ -239,4 +239,4 @@ function rb_plot(x_range, B, temp, points; toys=false, analytical_approx=false, 
     println(our_RB_vals)
 end
 
-end # module Urca
+end # module Urca_old

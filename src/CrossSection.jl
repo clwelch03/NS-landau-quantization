@@ -1,15 +1,13 @@
 module CrossSection
 
-export σ, σ_zero_field
+export cross_section, cross_section_zero_field
 
-include("../utils/HelperFunctions.jl")
-include("../utils/Constants.jl")
-include("../eos/EOS.jl")
-include("../utils/I_nr.jl")
-
+include("utils/HelperFunctions.jl")
+include("utils/Constants.jl")
+include("eos/EOS.jl")
+include("utils/I_nr.jl")
+ 
 using HCubature, Roots, SpecialFunctions, .EOS, .HelperFunctions, .I_nr, QuadGK
-
-fermi_dirac(x) = 1/(exp(x)+1)
 
 """
     m_red_low_density(proton_spin, neutron_spin, n_p, n_e, E_e, k_n, k_zp, k_ze, k_nu, cos_θnu, B)
@@ -39,11 +37,11 @@ end
 
 
 """
-    σ_sign_sum(channel, neutron_spin, proton_spin, n_p, n_e, k_n, E_e, k_zp, k_ze, k_nu, cos_θnu, B)
+    cross_section_sign_sum(channel, neutron_spin, proton_spin, n_p, n_e, k_n, E_e, k_zp, k_ze, k_nu, cos_θnu, B)
 
 Calculate the sign sum for the opacity calculation.
 """
-function σ_sign_sum(channel, neutron_spin, proton_spin, n_p, n_e, k_n, E_e, k_zp, k_ze, k_nu, cos_θnu, B)
+function cross_section_sign_sum(channel, neutron_spin, proton_spin, n_p, n_e, k_n, E_e, k_zp, k_ze, k_nu, cos_θnu, B)
     sum_over_signs = 0
     k_znu = k_nu*cos_θnu
 
@@ -61,28 +59,28 @@ function σ_sign_sum(channel, neutron_spin, proton_spin, n_p, n_e, k_n, E_e, k_z
             end
         end
     else
-        @error "σ_sign_sum: channel not properly set as 'n' or 'p'"
+        @error "cross_section_sign_sum: channel not properly set as 'n' or 'p'"
     end
     sum_over_signs
 end
 
 
 """
-    _bound_kz_tilde_opacity(n_p, n_e, k_nu, proton_spin, B, T, μ_p, μ_e)
+    _bound_kz_tilde_opacity(n_p, n_e, k_nu, proton_spin, B, T, mu_p, mu_e)
 
 Calculate the sign sum for the opacity calculation.
 """
-function _bound_kz_tilde_opacity(n_p, n_e, k_nu, proton_spin, B, T, μ_p, μ_e)
-    if μ_p < PROTON_MASS
+function _bound_kz_tilde_opacity(n_p, n_e, k_nu, proton_spin, B, T, mu_p, mu_e)
+    if mu_p < PROTON_MASS
         kzp_upper_squared = max(0, 2*PROTON_MASS*(k_nu + TEMP_STEPS*T + proton_spin*PROTON_G_MINUS_2*ELEM_CHARGE*B/PROTON_MASS - n_p*ELEM_CHARGE*B/PROTON_MASS))
     else
-        kzp_upper_squared = max(0, 2*PROTON_MASS*(μ_p - PROTON_MASS + k_nu + TEMP_STEPS*T + proton_spin*PROTON_G_MINUS_2*ELEM_CHARGE*B/PROTON_MASS - n_p*ELEM_CHARGE*B/PROTON_MASS))
+        kzp_upper_squared = max(0, 2*PROTON_MASS*(mu_p - PROTON_MASS + k_nu + TEMP_STEPS*T + proton_spin*PROTON_G_MINUS_2*ELEM_CHARGE*B/PROTON_MASS - n_p*ELEM_CHARGE*B/PROTON_MASS))
     end
 
-    if μ_e < ELECTRON_MASS
+    if mu_e < ELECTRON_MASS
         kze_upper_squared = max(0, (k_nu + TEMP_STEPS*T)^2 - (ELECTRON_MASS^2 + 2*n_e*ELEM_CHARGE*B))
     else
-        kze_upper_squared = max(0, (μ_e + k_nu + TEMP_STEPS*T)^2 - (ELECTRON_MASS^2 + 2*n_e*ELEM_CHARGE*B))
+        kze_upper_squared = max(0, (mu_e + k_nu + TEMP_STEPS*T)^2 - (ELECTRON_MASS^2 + 2*n_e*ELEM_CHARGE*B))
     end
 
     (0, sqrt(kzp_upper_squared)/T), (0, sqrt(kze_upper_squared)/T)
@@ -90,11 +88,11 @@ end
 
 
 """
-    σ_integrand(channel, k_zp_tilde, k_ze_tilde, n_p, n_e, μ_n, μ_p, μ_e, k_nu, cos_θnu, neutron_spin, proton_spin, B, T)
+    cross_section_integrand(channel, k_zp_tilde, k_ze_tilde, n_p, n_e, mu_n, mu_p, mu_e, k_nu, cos_θnu, neutron_spin, proton_spin, B, T)
 
 Compute the integrand for the cross-section calculation.
 """
-function σ_integrand(channel, k_zp_tilde, k_ze_tilde, n_p, n_e, μ_n, μ_p, μ_e, k_nu, cos_θnu, neutron_spin, proton_spin, B, T, blocking)
+function cross_section_integrand(channel, k_zp_tilde, k_ze_tilde, n_p, n_e, mu_n, mu_p, mu_e, k_nu, cos_θnu, neutron_spin, proton_spin, B, T, blocking)
     k_zp = k_zp_tilde * T
     k_ze = k_ze_tilde * T
     E_p = sqrt(PROTON_MASS^2 + k_zp^2 + 2*n_p*ELEM_CHARGE*B - PROTON_G_MINUS_2*ELEM_CHARGE*B*proton_spin)
@@ -103,7 +101,7 @@ function σ_integrand(channel, k_zp_tilde, k_ze_tilde, n_p, n_e, μ_n, μ_p, μ_
 
     # Checks that the state is accessible
     if channel == "n"
-        if E_e + E_p - k_nu >= maximum([NEUTRON_MASS, μ_n]) + TEMP_STEPS * T
+        if E_e + E_p - k_nu >= maximum([NEUTRON_MASS, mu_n]) + TEMP_STEPS * T
             return 0
         end
     elseif channel == "p"
@@ -122,21 +120,21 @@ function σ_integrand(channel, k_zp_tilde, k_ze_tilde, n_p, n_e, μ_n, μ_p, μ_
     # Fermi-Dirac factors, ignoring final state blocking for the electron
     if channel == "n"
         if blocking
-            fermi_dirac_factors = fermi_dirac((E_e+E_p-k_nu-μ_n)/T) * fermi_dirac((-E_p+μ_p)/T) * fermi_dirac((-E_e+μ_e)/T)
+            fermi_dirac_factors = fermi_dirac((E_e+E_p-k_nu-mu_n)/T) * fermi_dirac((-E_p+mu_p)/T) * fermi_dirac((-E_e+mu_e)/T)
         else
-            fermi_dirac_factors = fermi_dirac((E_e+E_p-k_nu-μ_n)/T)
+            fermi_dirac_factors = fermi_dirac((E_e+E_p-k_nu-mu_n)/T)
         end
     elseif channel == "p"
         if blocking
-            fermi_dirac_factors = fermi_dirac((E_e-E_p-k_nu+μ_n)/T) * fermi_dirac((E_p-μ_p)/T) * fermi_dirac((-E_e-μ_e)/T)
+            fermi_dirac_factors = fermi_dirac((E_e-E_p-k_nu+mu_n)/T) * fermi_dirac((E_p-mu_p)/T) * fermi_dirac((-E_e-mu_e)/T)
         else
-            fermi_dirac_factors = fermi_dirac((E_p-μ_p)/T)
+            fermi_dirac_factors = fermi_dirac((E_p-mu_p)/T)
         end
     else
-        @error "σ_integrand: σ integrand channel not properly set as 'n' or 'p'"
+        @error "cross_section_integrand: cross_section integrand channel not properly set as 'n' or 'p'"
     end
         
-    sign_sum = σ_sign_sum(channel, neutron_spin, proton_spin, n_p, n_e, k_n, E_e, k_zp, k_ze, k_nu, cos_θnu, B)
+    sign_sum = cross_section_sign_sum(channel, neutron_spin, proton_spin, n_p, n_e, k_n, E_e, k_zp, k_ze, k_nu, cos_θnu, B)
 
     # Magic factor of 2 to match DQ
     2 * E_n*fermi_dirac_factors*sign_sum
@@ -144,15 +142,15 @@ end
 
 
 """
-    σ_integral(channel, n_p, n_e, μ_n, μ_p, μ_e, k_nu, cos_θnu, neutron_spin, proton_spin, B, T)
+    cross_section_integral(channel, n_p, n_e, mu_n, mu_p, mu_e, k_nu, cos_θnu, neutron_spin, proton_spin, B, T)
 
 Compute the integrand for the cross-section calculation.
 """
-function σ_integral(channel, n_p, n_e, μ_n, μ_p, μ_e, k_nu, cos_θnu, neutron_spin, proton_spin, B, T, blocking, evals)
-    kzp_tilde_bounds, kze_tilde_bounds = _bound_kz_tilde_opacity(n_p, n_e, k_nu, proton_spin, B, T, μ_p, μ_e)
+function cross_section_integral(channel, n_p, n_e, mu_n, mu_p, mu_e, k_nu, cos_θnu, neutron_spin, proton_spin, B, T, blocking, evals)
+    kzp_tilde_bounds, kze_tilde_bounds = _bound_kz_tilde_opacity(n_p, n_e, k_nu, proton_spin, B, T, mu_p, mu_e)
 
-    integrand_func_wrapper(kz_tilde_vec) = σ_integrand(channel, kz_tilde_vec[1], kz_tilde_vec[2], n_p, n_e, μ_n,
-                                                μ_p, μ_e, k_nu, cos_θnu, neutron_spin, proton_spin, B, T, blocking)
+    integrand_func_wrapper(kz_tilde_vec) = cross_section_integrand(channel, kz_tilde_vec[1], kz_tilde_vec[2], n_p, n_e, mu_n,
+                                                mu_p, mu_e, k_nu, cos_θnu, neutron_spin, proton_spin, B, T, blocking)
     
     integral_result, _ = hcubature(integrand_func_wrapper, (kzp_tilde_bounds[1], kze_tilde_bounds[1]), 
         (kzp_tilde_bounds[2], kze_tilde_bounds[2]); maxevals=evals) # huge number of maxevals so the integral actually works
@@ -161,21 +159,21 @@ end
 
 
 """
-    σ(channel, n_B, Y_e, k_nu, cos_θnu, B, T)
+    cross_section(channel, n_B, Y_e, k_nu, cos_θnu, B, T)
 
 Compute the integrand for the cross-section calculation.
 """
-function σ(channel, n_B, Y_e, k_nu, cos_θnu, B, T; blocking = true, evals = 50000)
+function cross_section(channel, n_B, Y_e, k_nu, cos_θnu, B, T; blocking = true, evals = 50000)
     B_MeV2 = B * GAUSS_TO_MEV2
     prefactor = (G_F^2 * COS2_CABIBBO_ANGLE * ELEM_CHARGE * B_MeV2 * T^2) / (64*pi^3)
 
     n_n = (1-Y_e) * n_B
     n_p = Y_e * n_B
 
-    μ_n = find_zero(µ -> n_n - neutron_density(µ, B, T), (850, 1000))
-    μ_p = find_zero(µ -> n_p - proton_density(µ, B, T), (850, 1000))
-    μ_e = find_zero(µ -> n_p - electron_density(µ, B, T), (0, 200))
-    println(μ_n, " ", μ_p, " ", μ_e)
+    mu_n = find_zero(mu -> n_n - neutron_density(mu, B, T), (850, 1000))
+    mu_p = find_zero(mu -> n_p - proton_density(mu, B, T), (850, 1000))
+    mu_e = find_zero(mu -> n_p - electron_density(mu, B, T), (0, 200))
+    println(mu_n, " ", mu_p, " ", mu_e)
     # Maximum Landau level attainable for proton (spin up/down) and electron
     # If spin splitting is disabled, n_max_p_up = n_max_p_down, and we can use
     # either one of them
@@ -188,10 +186,10 @@ function σ(channel, n_B, Y_e, k_nu, cos_θnu, B, T; blocking = true, evals = 50
     for neutron_spin in (-0.5, 0.5), proton_spin in (-0.5, 0.5)
         for n_e in 0:n_max_e
             for n_p_up in 0:n_max_p_up
-                landau_sum += σ_integral(channel, n_p_up, n_e, μ_n, μ_p, μ_e, k_nu, cos_θnu, neutron_spin, proton_spin, B_MeV2, T, blocking, evals)
+                landau_sum += cross_section_integral(channel, n_p_up, n_e, mu_n, mu_p, mu_e, k_nu, cos_θnu, neutron_spin, proton_spin, B_MeV2, T, blocking, evals)
             end
             for n_p_down in 0:n_max_p_down
-                landau_sum += σ_integral(channel, n_p_down, n_e, μ_n, μ_p, μ_e, k_nu, cos_θnu, neutron_spin, proton_spin, B_MeV2, T, blocking, evals)
+                landau_sum += cross_section_integral(channel, n_p_down, n_e, mu_n, mu_p, mu_e, k_nu, cos_θnu, neutron_spin, proton_spin, B_MeV2, T, blocking, evals)
             end
         end
     end
@@ -201,27 +199,28 @@ function σ(channel, n_B, Y_e, k_nu, cos_θnu, B, T; blocking = true, evals = 50
     elseif channel == "p"
         prefactor * landau_sum * (197.3/10^13)^2/n_p
     else
-        @error "σ: channel not properly set as 'n' or 'p'"
+        @error "cross_section: channel not properly set as 'n' or 'p'"
     end
 end
+
 
 Δnp = 1.293 # mass gap
 
 
 """
-    σ_zero_field(channel, k_nu, cos_thetanu, B, T)
+    cross_section_approx(channel, k_nu, cos_thetanu, B, T)
 
-Compute the zero-field approximation ``σ_{ν N}^{(1)}``
+Compute the zero-field approximation, with first-order magnetic correction, from Duan/Qian.
 """
-function σ_zero_field(channel, k_nu, cos_thetanu, B, T)
+function cross_section_approx(channel, k_nu, cos_thetanu, B, T)
     np_sign = channel == "n" ? +1 : -1
     χ = channel == "n" ? NEUTRON_AMM * B * GAUSS_TO_MEV2/T : PROTON_AMM * B * GAUSS_TO_MEV2/T
     numerator_pm = channel == "n" ? G_V + G_A : G_V - G_A
     ϵ = χ * (2*numerator_pm*G_A)/(G_V^2+3*G_A^2) * cos_thetanu
     E_e_0 = max(ELECTRON_MASS, k_nu + np_sign*Δnp)
-    σ_νN_0 = G_F^2*COS2_CABIBBO_ANGLE/pi * E_e_0 * sqrt(E_e_0^2 - ELECTRON_MASS^2) * (197.3/10^13)^2
-    σ_νN_1 = σ_νN_0 * (1 - (2*(G_V^2 - np_sign*2*(G_V+F_2)*G_A + 5*G_A^2)) / (G_V^2 + 3*G_A^2) * k_nu/NEUTRON_MASS)
-    σ_νN_1 * (1+ϵ)
+    mu_νN_0 = G_F^2*COS2_CABIBBO_ANGLE/pi * E_e_0 * sqrt(E_e_0^2 - ELECTRON_MASS^2) * (197.3/10^13)^2
+    mu_νN_1 = mu_νN_0 * (1 - (2*(G_V^2 - np_sign*2*(G_V+F_2)*G_A + 5*G_A^2)) / (G_V^2 + 3*G_A^2) * k_nu/NEUTRON_MASS)
+    mu_νN_1 * (1+ϵ)
 end
 
 end # module sigma

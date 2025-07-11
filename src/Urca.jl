@@ -1,10 +1,11 @@
-module DirectUrca
-export direct_urca_rate, density, qc_emissivity, find_µ_range_endpoints, rb
+module Urca
+export direct_urca_rate, modified_urca_rate, density, qc_emissivity, find_µ_range_endpoints, rb
 
-include("../eos/EOS.jl")
-include("../utils/HelperFunctions.jl")
-include("../utils/Constants.jl")
-include("../utils/I_nr.jl")
+include("eos/EOS.jl")
+include("utils/HelperFunctions.jl")
+include("utils/Constants.jl")
+include("utils/I_nr.jl")
+
 using HCubature, SpecialFunctions, .EOS, .HelperFunctions, .I_nr, PolyLog, Roots
 
 
@@ -71,11 +72,12 @@ function m_red(proton_spin, n_p, n_e, E_Fn, E_Fe, k_Fn, k_zp, k_ze, B, M_n_star,
                                     + 2 * I_ne_np * I_neminus1_npminus1 * k_zp
                                         * (2*ELEM_CHARGE*B*sqrt(n_e*n_p))/((M_L_p_star+M_p_star)^2*E_Fe)))
     else
-        @error "M_red: Proton spin not set to ±0.5."
+        @error "m_red: Proton spin not set to ±0.5."
     end
 
     gv_plus_ga_term + gv_minus_ga_term + gv2_minus_ga2_term
 end
+
 
 """
     _sign_sum(spin, n_p, n_e, E_Fn, E_Fe, k_Fn, k_zp, k_ze, B, M_n_star, M_p_star)
@@ -123,7 +125,7 @@ end
 
 Calculate the integrand function for the phasespace integrals, including the sum over signs: ``-6*\\text{Li}_4(-\\exp(-x_e-x_p))*f(-x_e)*f(-x_p) \\Sigma``.
 """
-function _integrand_func_with_Mred(k_zp_tilde, k_ze_tilde, n_p, n_e, k_Fn, k_Fp, k_Fe, E_Fn, M_n_star, M_p_star, proton_spin, B, T)
+function _integrand_func_with_m_red(k_zp_tilde, k_ze_tilde, n_p, n_e, k_Fn, k_Fp, k_Fe, E_Fn, M_n_star, M_p_star, proton_spin, B, T)
     x_e_val = sqrt(k_ze_tilde^2 + 2 * n_e * ELEM_CHARGE * B / T^2) - k_Fe / T
     x_p_val = sqrt(k_zp_tilde^2 + (M_p_star^2 + 2*n_p*ELEM_CHARGE*B - proton_spin*PROTON_G_MINUS_2*ELEM_CHARGE*B) / T^2) - (sqrt(k_Fp^2 + M_p_star^2) / T)
 
@@ -158,7 +160,7 @@ end
 
 
 """
-    _phasespace_integrals_with_Mred(n_p, n_e, k_Fn, k_Fp, E_Fn, proton_spin, µ_e, M_n_star, M_p_star, B, T)
+    _phasespace_integrals_with_m_red(n_p, n_e, k_Fn, k_Fp, E_Fn, proton_spin, µ_e, M_n_star, M_p_star, B, T)
 
 Compute the phasespace integrals, with M_red inside the integral.
 """
@@ -166,7 +168,7 @@ function _phasespace_integrals_with_m_red(n_p, n_e, k_Fn, k_Fp, E_Fn, proton_spi
     kzp_tilde_bounds = bound_kz_tilde(k_Fp, M_p_star, n_p, proton_spin, B, T)
     kze_tilde_bounds = bound_kz_tilde(µ_e, 0, n_e, 0, B, T)
 
-    integrand_func_wrapper(kz_tilde_vec) = _integrand_func_with_Mred(kz_tilde_vec[1], kz_tilde_vec[2],
+    integrand_func_wrapper(kz_tilde_vec) = _integrand_func_with_m_red(kz_tilde_vec[1], kz_tilde_vec[2],
                                                 n_p, n_e, k_Fn, k_Fp, µ_e, E_Fn, M_n_star, M_p_star, proton_spin, B, T)
 
     integral_result, _ = hcubature(integrand_func_wrapper, (kzp_tilde_bounds[1], kze_tilde_bounds[1]), 
@@ -178,11 +180,11 @@ density(k_Fn, k_Fp) = (k_Fn^3 + k_Fp^3)/(3*pi^2*197.3^3)
 
 
 """
-    _emissivity_singlepair_wrapper(spin, n_p, n_e, E_Fn, µ_e, k_Fp, k_Fn, B_MeV2, M_n_star, M_p_star, T, analytical_approx, Mred_in_int)
+    _emissivity_singlepair_wrapper(spin, n_p, n_e, E_Fn, µ_e, k_Fp, k_Fn, B_MeV2, M_n_star, M_p_star, T, analytical_approx, m_red_in_int)
 
 Compute the emissivity at a single LL pair ``(n_p, n_e)``.
 """
-function _emissivity_singlepair_wrapper(spin, n_p, n_e, E_Fn, µ_e, k_Fp, k_Fn, B_MeV2, M_n_star, M_p_star, T, analytical_approx, Mred_in_int, force_numerical)
+function _emissivity_singlepair_wrapper(spin, n_p, n_e, E_Fn, µ_e, k_Fp, k_Fn, B_MeV2, M_n_star, M_p_star, T, analytical_approx, m_red_in_int, force_numerical)
     k_zp = sqrt(max(0, k_Fp^2 - 2*n_p*ELEM_CHARGE*B_MeV2 + spin*PROTON_G_MINUS_2*ELEM_CHARGE*B_MeV2))
     k_ze = sqrt(max(0, µ_e^2 - 2*n_e*ELEM_CHARGE*B_MeV2))
     sum_over_signs = _sign_sum(spin, n_p, n_e, E_Fn, µ_e, k_Fn, k_zp, k_ze, B_MeV2, M_n_star, M_p_star)
@@ -191,7 +193,7 @@ function _emissivity_singlepair_wrapper(spin, n_p, n_e, E_Fn, µ_e, k_Fp, k_Fn, 
     M_L_p_star = sqrt(M_p_star^2 + k_zp^2 + 2*n_p*ELEM_CHARGE*B_MeV2 - ELEM_CHARGE*B_MeV2*spin*PROTON_G_MINUS_2)
     # If the integral bounds extend to zero or k_z is small, need the numerical integration; otherwise, analytical is fine
     if force_numerical || !analytical_approx || k_ze/µ_e < 0.2 || k_zp/k_Fp < 0.2
-        if Mred_in_int
+        if m_red_in_int
             emissivity_from_current_pair = (NUMERICAL_PREFACTOR * (M_L_p_star+M_p_star)/M_L_p_star 
             * _phasespace_integrals_with_m_red(n_p, n_e, k_Fn, k_Fp, E_Fn, spin, µ_e, M_n_star, M_p_star, B_MeV2, T))
         else
@@ -207,12 +209,12 @@ end
 
 """
     direct_urca_rate(µ_B, k_Fn, k_Fp, µ_e, M_n_star, M_p_star, B, T;
-                        spin_split=true, thermal_population=true, analytical_approx=true, Mred_in_int=true, cgs=true)
+                        spin_split=true, thermal_population=true, analytical_approx=true, m_red_in_int=true, cgs=true)
 
 Calculate the emissivity of the Direct Urca process.
 """
 function direct_urca_rate(µ_B, k_Fn, k_Fp, µ_e, M_n_star, M_p_star, B, T;
-                        spin_split=true, thermal_population=true, analytical_approx=false, Mred_in_int=true, cgs=true) # take in B in -> GAUSS <-
+                        spin_split=true, thermal_population=true, analytical_approx=false, m_red_in_int=true, cgs=true) # take in B in -> GAUSS <-
     # Determine physical values based on the chosen toggles
     E_Fn = µ_B
     spin_split ? spin_up = 0.5 : spin_up = 0
@@ -238,12 +240,12 @@ function direct_urca_rate(µ_B, k_Fn, k_Fp, µ_e, M_n_star, M_p_star, B, T;
     for n_e in 0:n_max_e
         for n_p_up in 0:n_max_p_up
             landau_sum += _emissivity_singlepair_wrapper(spin_up, n_p_up, n_e, E_Fn,
-            µ_e, k_Fp, k_Fn, B_MeV2, M_n_star, M_p_star, T, analytical_approx, Mred_in_int, n_e >= n_max_e-1 || n_p_up >= n_max_p_up-1)
+            µ_e, k_Fp, k_Fn, B_MeV2, M_n_star, M_p_star, T, analytical_approx, m_red_in_int, n_e >= n_max_e-1 || n_p_up >= n_max_p_up-1)
         end
         if spin_split
             for n_p_down in 0:n_max_p_down
                 landau_sum += _emissivity_singlepair_wrapper(-spin_up, n_p_down, n_e, E_Fn,
-                µ_e, k_Fp, k_Fn, B_MeV2, M_n_star, M_p_star, T, analytical_approx, Mred_in_int, n_e >= n_max_e-1 || n_p_down >= n_max_p_down-1)
+                µ_e, k_Fp, k_Fn, B_MeV2, M_n_star, M_p_star, T, analytical_approx, m_red_in_int, n_e >= n_max_e-1 || n_p_down >= n_max_p_down-1)
             end
         end
     end
@@ -299,11 +301,11 @@ end
 
 
 """
-    rb(µ_B, B, T; toys=false, analytical_approx=false, Mred_in_int=false)
+    rb(µ_B, B, T; toys=false, analytical_approx=false, m_red_in_int=false)
 
 Find the parameters ``RB_\text{qc}`` and ``RB``. (Also returns ``x`` and ``\rho`` for convenience.)
 """
-function rb(µ_B, B, T; toys=false, analytical_approx=false, Mred_in_int=false)
+function rb(µ_B, B, T; toys=false, analytical_approx=false, m_red_in_int=false)
     # process EoS params 
     if toys
         eos_data = eos_data_mag(iufsu_star_constants_mag, µ_B/197.3, B/1e15) * 197.3
@@ -329,10 +331,10 @@ function rb(µ_B, B, T; toys=false, analytical_approx=false, Mred_in_int=false)
     # Our calculation
     if toys
         Q_nu, n_max_arr  = direct_urca_rate(µ_B, k_Fn, k_Fp, µ_e, M_n_star, M_p_star, B, T;
-        spin_split=true, thermal_population=true, analytical_approx=analytical_approx, Mred_in_int=Mred_in_int, cgs=false)
+        spin_split=true, thermal_population=true, analytical_approx=analytical_approx, m_red_in_int=m_red_in_int, cgs=false)
     else
         Q_nu, n_max_arr = direct_urca_rate(µ_B, k_Fn, k_Fp, µ_e, M_n_star, M_p_star, B, T;
-        spin_split=false, thermal_population=false, analytical_approx=analytical_approx, Mred_in_int=Mred_in_int, cgs=false)
+        spin_split=false, thermal_population=false, analytical_approx=analytical_approx, m_red_in_int=m_red_in_int, cgs=false)
     end
 
     # BY's calculation
@@ -379,4 +381,27 @@ function qc_emissivity(k_Fn, k_Fp, M_n_star, M_p_star, B, T; µ_e=-1)
     (Q_nu_0 * R_b * MEV4_TO_CGS), R_b, BY_x
 end
 
-end # module DUrca
+
+"""
+    modified_urca_rate(k_Fn, k_Fp, m_n_star, m_p_star, T; cgs=true)
+
+Calculate the modified Urca emissivity.
+"""
+function modified_urca_rate(k_Fn, k_Fp, m_n_star, m_p_star, T; cgs=true)
+    m_n_landau = sqrt(k_Fn^2 + m_n_star^2)
+    m_p_landau = sqrt(k_Fp^2 + m_p_star^2)
+    n_p = k_Fp^3/(3*pi^2)
+    n_0 = 1228857 # wow this sucks
+    
+    mass_ratios = (m_n_landau/m_n_star)^3 * (m_p_landau/m_p_star)
+    density_ratio = (n_p/n_0)^(1/3)
+    T_K9 = T * 11.61
+    emissivity_cgs = 8.1*10^21 * mass_ratios * density_ratio * T_K9^8 * ALPHA_N * BETA_N
+    if !cgs
+        return emissivity_cgs * ERG_TO_MEV * RECIP_CM_TO_MEV^3 * RECIP_S_TO_MEV
+    else
+        return emissivity_cgs
+    end
+end
+
+end # module Urca
