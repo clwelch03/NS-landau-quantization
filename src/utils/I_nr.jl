@@ -6,7 +6,7 @@ export I
 inr_table = Vector{Vector{Float32}}()  # Vector of vectors (matrix-like)
 
 # Open the CSV file and process it line by line
-open("./inr_output_250_250.csv", "r") do file
+open("../utils/inr_output_250_250.csv", "r") do file
 	# Iterate over each line of the file
 	for line in eachline(file)
 		# Split the line by commas (CSV format) and push it as a new vector to the matrix
