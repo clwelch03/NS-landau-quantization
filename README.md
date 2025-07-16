@@ -12,7 +12,7 @@ The two most important functions are `Urca.urca_rate_wrapper(mu_B, B, T)`, which
 * the density (using the IUFSU* equation of state)
 * and the number of available Landau levels (proton spin up, proton spin down, and electron),
 
-and `CrossSection.cross_section(channel, n_B, Y_e, k_nu, cos_θnu, B, T)`, which returns the cross-section of neutrino capture onto nucleons. (Both of these functions also have optional keyword arguments.) 
+and `CrossSection.cross_section(channel, n_B, Y_e, k_nu, cos_theta_nu, B, T)`, which returns the cross-section of neutrino capture onto nucleons. (Both of these functions also have optional keyword arguments.) 
 
 
 ## Cite this work
