@@ -6,7 +6,7 @@ include("utils/HelperFunctions.jl")
 include("utils/Constants.jl")
 include("utils/I_nr.jl")
 
-using HCubature, SpecialFunctions, .EOS, .HelperFunctions, .I_nr, PolyLog, Roots
+using HCubature, SpecialFunctions, .EOS, .HelperFunctions, PolyLog, Roots, .I_nr
 
 
 """
@@ -406,11 +406,11 @@ end
 
 
 """
-    urca_rate_wrapper(mu_B, B, T; mageos=true, nuc_inter=true, spin_split=true, thermal_population=true, analytical_approx=false, Mred_in_int=true)
+    urca_rate_wrapper(mu_B, B, T; mageos=true, nuc_inter=true, spin_split=true, thermal_population=true, analytical_approx=false, m_red_in_int=true)
 
 Compute the direct Urca, modified Urca, and quasiclassical DUrca rates, as well as the density and number of available LLs, for a given baryon chemical potential.
 """
-function urca_rate_wrapper(mu_B, B, T; mageos=true, nuc_inter=true, spin_split=true, thermal_population=true, analytical_approx=false, Mred_in_int=true)
+function urca_rate_wrapper(mu_B, B, T; mageos=true, nuc_inter=true, spin_split=true, thermal_population=true, analytical_approx=false, m_red_in_int=true)
     # calculate EoS params
     if mageos
         eos_data = eos_data_mag(iufsu_star_constants_mag, mu_B/197.3, B/1e15) * 197.3
@@ -434,7 +434,7 @@ function urca_rate_wrapper(mu_B, B, T; mageos=true, nuc_inter=true, spin_split=t
 
     # calculate rate values for both reactions
     DUrca_rate_val, n_maxes = direct_urca_rate(mu_B, k_Fn, k_Fp, µ_e, M_n_star, M_p_star, B, T;
-        spin_split=spin_split, thermal_population=thermal_population, analytical_approx=analytical_approx, Mred_in_int=Mred_in_int, cgs=true)
+        spin_split=spin_split, thermal_population=thermal_population, analytical_approx=analytical_approx, m_red_in_int=m_red_in_int, cgs=true)
     MUrca_rate_val = modified_urca_rate(k_Fn, k_Fp, M_n_star, M_p_star, T, cgs=true)
     qc_rate_val = qc_emissivity(k_Fn, k_Fp, M_n_star, M_p_star, B, T, µ_e=µ_e)[1]
 

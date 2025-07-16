@@ -5,9 +5,9 @@ export cross_section, cross_section_zero_field
 include("utils/HelperFunctions.jl")
 include("utils/Constants.jl")
 include("eos/EOS.jl")
-include("utils/I_nr.jl")
+# include("utils/I_nr.jl")
  
-using HCubature, Roots, SpecialFunctions, .EOS, .HelperFunctions, .I_nr, QuadGK
+using HCubature, Roots, SpecialFunctions, .EOS, .HelperFunctions, QuadGK
 
 """
     m_red_low_density(proton_spin, neutron_spin, n_p, n_e, E_e, k_n, k_zp, k_ze, k_nu, cos_θnu, B)
@@ -66,11 +66,11 @@ end
 
 
 """
-    _bound_kz_tilde_opacity(n_p, n_e, k_nu, proton_spin, B, T, mu_p, mu_e)
+    _bound_kz_tilde_cross_section(n_p, n_e, k_nu, proton_spin, B, T, mu_p, mu_e)
 
-Calculate the sign sum for the opacity calculation.
+Place bounds on kz_tilde for the cross-section phasespace integral.
 """
-function _bound_kz_tilde_opacity(n_p, n_e, k_nu, proton_spin, B, T, mu_p, mu_e)
+function _bound_kz_tilde_cross_section(n_p, n_e, k_nu, proton_spin, B, T, mu_p, mu_e)
     if mu_p < PROTON_MASS
         kzp_upper_squared = max(0, 2*PROTON_MASS*(k_nu + TEMP_STEPS*T + proton_spin*PROTON_G_MINUS_2*ELEM_CHARGE*B/PROTON_MASS - n_p*ELEM_CHARGE*B/PROTON_MASS))
     else
@@ -147,7 +147,7 @@ end
 Compute the integrand for the cross-section calculation.
 """
 function cross_section_integral(channel, n_p, n_e, mu_n, mu_p, mu_e, k_nu, cos_θnu, neutron_spin, proton_spin, B, T, blocking, evals)
-    kzp_tilde_bounds, kze_tilde_bounds = _bound_kz_tilde_opacity(n_p, n_e, k_nu, proton_spin, B, T, mu_p, mu_e)
+    kzp_tilde_bounds, kze_tilde_bounds = _bound_kz_tilde_cross_section(n_p, n_e, k_nu, proton_spin, B, T, mu_p, mu_e)
 
     integrand_func_wrapper(kz_tilde_vec) = cross_section_integrand(channel, kz_tilde_vec[1], kz_tilde_vec[2], n_p, n_e, mu_n,
                                                 mu_p, mu_e, k_nu, cos_θnu, neutron_spin, proton_spin, B, T, blocking)
@@ -208,15 +208,15 @@ end
 
 
 """
-    cross_section_approx(channel, k_nu, cos_thetanu, B, T)
+    cross_section_approx(channel, k_nu, cos_theta_nu, B, T)
 
-Compute the zero-field approximation, with first-order magnetic correction, from Duan/Qian.
+Compute the zero-field approximation, with first-order magnetic correction, from the Duan/Qian paper.
 """
-function cross_section_approx(channel, k_nu, cos_thetanu, B, T)
+function cross_section_approx(channel, k_nu, cos_theta_nu, B, T)
     np_sign = channel == "n" ? +1 : -1
     χ = channel == "n" ? NEUTRON_AMM * B * GAUSS_TO_MEV2/T : PROTON_AMM * B * GAUSS_TO_MEV2/T
     numerator_pm = channel == "n" ? G_V + G_A : G_V - G_A
-    ϵ = χ * (2*numerator_pm*G_A)/(G_V^2+3*G_A^2) * cos_thetanu
+    ϵ = χ * (2*numerator_pm*G_A)/(G_V^2+3*G_A^2) * cos_theta_nu
     E_e_0 = max(ELECTRON_MASS, k_nu + np_sign*Δnp)
     mu_νN_0 = G_F^2*COS2_CABIBBO_ANGLE/pi * E_e_0 * sqrt(E_e_0^2 - ELECTRON_MASS^2) * (197.3/10^13)^2
     mu_νN_1 = mu_νN_0 * (1 - (2*(G_V^2 - np_sign*2*(G_V+F_2)*G_A + 5*G_A^2)) / (G_V^2 + 3*G_A^2) * k_nu/NEUTRON_MASS)
