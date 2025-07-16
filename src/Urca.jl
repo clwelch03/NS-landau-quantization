@@ -1,5 +1,5 @@
 module Urca
-export direct_urca_rate, modified_urca_rate, density, qc_emissivity, find_µ_range_endpoints, rb
+export direct_urca_rate, modified_urca_rate, density, qc_emissivity, find_µ_range_endpoints, rb, urca_rate_wrapper
 
 include("eos/EOS.jl")
 include("utils/HelperFunctions.jl")
@@ -404,4 +404,41 @@ function modified_urca_rate(k_Fn, k_Fp, m_n_star, m_p_star, T; cgs=true)
     end
 end
 
+
+"""
+    urca_rate_wrapper(mu_B, B, T; mageos=true, nuc_inter=true, spin_split=true, thermal_population=true, analytical_approx=false, Mred_in_int=true)
+
+Compute the direct Urca, modified Urca, and quasiclassical DUrca rates, as well as the density and number of available LLs, for a given baryon chemical potential.
+"""
+function urca_rate_wrapper(mu_B, B, T; mageos=true, nuc_inter=true, spin_split=true, thermal_population=true, analytical_approx=false, Mred_in_int=true)
+    # calculate EoS params
+    if mageos
+        eos_data = eos_data_mag(iufsu_star_constants_mag, mu_B/197.3, B/1e15) * 197.3
+    else
+        eos_data = eos_data_rmf(iufsu_star_constants, mu_B/197.3) * 197.3
+    end
+
+    # process EoS params 
+    if nuc_inter
+        k_Fn, k_Fp, µ_e, M_n_star, M_p_star = process_eos_data(eos_data, mageos)
+        E_Fn = mu_B
+        E_Fp = mu_B - µ_e 
+    else
+        k_Fn, k_Fp, µ_e, _, _ = process_eos_data(eos_data, mageos)
+        M_n_star = 940.6
+        M_p_star = 938.3
+        E_Fn = mu_B
+        E_Fp = mu_B - µ_e
+    end
+    density_val = density(k_Fn, k_Fp)
+
+    # calculate rate values for both reactions
+    DUrca_rate_val, n_maxes = direct_urca_rate(mu_B, k_Fn, k_Fp, µ_e, M_n_star, M_p_star, B, T;
+        spin_split=spin_split, thermal_population=thermal_population, analytical_approx=analytical_approx, Mred_in_int=Mred_in_int, cgs=true)
+    MUrca_rate_val = modified_urca_rate(k_Fn, k_Fp, M_n_star, M_p_star, T, cgs=true)
+    qc_rate_val = qc_emissivity(k_Fn, k_Fp, M_n_star, M_p_star, B, T, µ_e=µ_e)[1]
+
+    # println("durca rate args: ", mu_B, " ", k_Fn, " ", k_Fp, " ", µ_e, " ", M_n_star, " ", M_p_star)
+    DUrca_rate_val, MUrca_rate_val, qc_rate_val, density_val, n_maxes #, durca_threshold_val
+end
 end # module Urca
