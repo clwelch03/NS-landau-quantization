@@ -23,6 +23,9 @@ identifiers:
   - type: url
     value: 'https://arxiv.org/abs/2412.02925'
     description: arxiv url
+  - type: doi
+    value: 10.1103/PhysRevD.111.063009
+    description: Phys Rev D publication
 repository-code: 'https://github.com/clwelch03/NS-landau-quantization'
 abstract: >-
   Some neutron stars known as magnetars possess very strong
