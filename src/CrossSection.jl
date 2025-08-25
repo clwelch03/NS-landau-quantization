@@ -5,30 +5,32 @@ export cross_section, cross_section_zero_field
 include("utils/HelperFunctions.jl")
 include("utils/Constants.jl")
 include("eos/EOS.jl")
-# include("utils/I_nr.jl")
+include("utils/I_nr.jl")
  
-using HCubature, Roots, SpecialFunctions, .EOS, .HelperFunctions, QuadGK
+using HCubature, Roots, SpecialFunctions, .EOS, .HelperFunctions, QuadGK, .I_nr
+
+fermi_dirac_simple(x) = 1/(exp(x)+1) #TODO: all calls to this should eventually be phased out and turned into calls to fermi_dirac
 
 """
-    m_red_low_density(proton_spin, neutron_spin, n_p, n_e, E_e, k_n, k_zp, k_ze, k_nu, cos_θnu, B)
+    m_red_low_density(proton_spin, neutron_spin, n_p, n_e, E_e, k_n, k_zp, k_ze, k_nu, cos_theta_nu, B)
 
 Calculate the reduced matrix element at low density -- i.e. for nucleon capture.
 """
-function m_red_low_density(proton_spin, neutron_spin, n_p, n_e, E_e, k_n, k_zp, k_ze, k_nu, cos_θnu, B)
-    k_zn = k_zp + k_ze - k_nu*cos_θnu
+function m_red_low_density(proton_spin, neutron_spin, n_p, n_e, E_e, k_n, k_zp, k_ze, k_nu, cos_theta_nu, B)
+    k_zn = k_zp + k_ze - k_nu*cos_theta_nu
     I_arg = (k_n^2 - k_zn^2) / (2*ELEM_CHARGE*B) # this is (w_perp^2 / 2eB)
 
     # see paper
     if proton_spin == 0.5 && neutron_spin == 0.5
-        result = ( (G_V + G_A)^2 * (1 + k_ze/E_e) * (1 + cos_θnu) * I(n_e, n_p, I_arg)^2
-                    + (G_V - G_A)^2 * (1 - k_ze/E_e) * (1 - cos_θnu) * I(n_e-1, n_p, I_arg)^2 )
+        result = ( (G_V + G_A)^2 * (1 + k_ze/E_e) * (1 + cos_theta_nu) * I(n_e, n_p, I_arg)^2
+                    + (G_V - G_A)^2 * (1 - k_ze/E_e) * (1 - cos_theta_nu) * I(n_e-1, n_p, I_arg)^2 )
     elseif proton_spin == 0.5 && neutron_spin == -0.5
-        result = 4*G_A^2 * (1 + k_ze/E_e) * (1 - cos_θnu) * I(n_e, n_p, I_arg)^2
+        result = 4*G_A^2 * (1 + k_ze/E_e) * (1 - cos_theta_nu) * I(n_e, n_p, I_arg)^2
     elseif proton_spin == -0.5 && neutron_spin == 0.5
-        result = 4*G_A^2 * (1 - k_ze/E_e) * (1 + cos_θnu) * I(n_e-1, n_p-1, I_arg)^2
+        result = 4*G_A^2 * (1 - k_ze/E_e) * (1 + cos_theta_nu) * I(n_e-1, n_p-1, I_arg)^2
     elseif proton_spin == -0.5 && neutron_spin == -0.5
-        result = ( (G_V + G_A)^2 * (1 - k_ze/E_e) * (1 - cos_θnu) * I(n_e-1, n_p-1, I_arg)^2
-                    + (G_V - G_A)^2 * (1 + k_ze/E_e) * (1 + cos_θnu) * I(n_e, n_p-1, I_arg)^2 )
+        result = ( (G_V + G_A)^2 * (1 - k_ze/E_e) * (1 - cos_theta_nu) * I(n_e-1, n_p-1, I_arg)^2
+                    + (G_V - G_A)^2 * (1 + k_ze/E_e) * (1 + cos_theta_nu) * I(n_e, n_p-1, I_arg)^2 )
     else
         @error "m_red_low_density: Either the proton spin $proton_spin or neutron spin $neutron_spin is not equal to ±0.5."
     end
@@ -37,25 +39,25 @@ end
 
 
 """
-    cross_section_sign_sum(channel, neutron_spin, proton_spin, n_p, n_e, k_n, E_e, k_zp, k_ze, k_nu, cos_θnu, B)
+    cross_section_sign_sum(channel, neutron_spin, proton_spin, n_p, n_e, k_n, E_e, k_zp, k_ze, k_nu, cos_theta_nu, B)
 
 Calculate the sign sum for the opacity calculation.
 """
-function cross_section_sign_sum(channel, neutron_spin, proton_spin, n_p, n_e, k_n, E_e, k_zp, k_ze, k_nu, cos_θnu, B)
+function cross_section_sign_sum(channel, neutron_spin, proton_spin, n_p, n_e, k_n, E_e, k_zp, k_ze, k_nu, cos_theta_nu, B)
     sum_over_signs = 0
-    k_znu = k_nu*cos_θnu
+    k_znu = k_nu*cos_theta_nu
 
     # Step function based on whether we're doing n + ν -> p + e or p + \bar{ν} -> n + \bar{e}
     if channel=="n"
         for k_zp_sign in (-1, 1), k_ze_sign in (-1, 1)
             if k_n > abs(k_zp_sign*k_zp + k_ze_sign*k_ze - k_znu)
-                sum_over_signs += m_red_low_density(proton_spin, neutron_spin, n_p, n_e, E_e, k_n, k_zp_sign*k_zp, k_ze_sign*k_ze, k_nu, cos_θnu, B)
+                sum_over_signs += m_red_low_density(proton_spin, neutron_spin, n_p, n_e, E_e, k_n, k_zp_sign*k_zp, k_ze_sign*k_ze, k_nu, cos_theta_nu, B)
             end
         end
     elseif channel=="p"
         for k_zp_sign in (-1, 1), k_ze_sign in (-1, 1)
             if k_n > abs(k_zp_sign*k_zp - k_ze_sign*k_ze + k_znu)
-                sum_over_signs += m_red_low_density(proton_spin, neutron_spin, n_p, n_e, E_e, k_n, k_zp_sign*k_zp, k_ze_sign*k_ze, k_nu, cos_θnu, B)
+                sum_over_signs += m_red_low_density(proton_spin, neutron_spin, n_p, n_e, E_e, k_n, k_zp_sign*k_zp, k_ze_sign*k_ze, k_nu, cos_theta_nu, B)
             end
         end
     else
@@ -88,11 +90,11 @@ end
 
 
 """
-    cross_section_integrand(channel, k_zp_tilde, k_ze_tilde, n_p, n_e, mu_n, mu_p, mu_e, k_nu, cos_θnu, neutron_spin, proton_spin, B, T)
+    cross_section_integrand(channel, k_zp_tilde, k_ze_tilde, n_p, n_e, mu_n, mu_p, mu_e, k_nu, cos_theta_nu, neutron_spin, proton_spin, B, T)
 
 Compute the integrand for the cross-section calculation.
 """
-function cross_section_integrand(channel, k_zp_tilde, k_ze_tilde, n_p, n_e, mu_n, mu_p, mu_e, k_nu, cos_θnu, neutron_spin, proton_spin, B, T, blocking)
+function cross_section_integrand(channel, k_zp_tilde, k_ze_tilde, n_p, n_e, mu_n, mu_p, mu_e, k_nu, cos_theta_nu, neutron_spin, proton_spin, B, T, blocking)
     k_zp = k_zp_tilde * T
     k_ze = k_ze_tilde * T
     E_p = sqrt(PROTON_MASS^2 + k_zp^2 + 2*n_p*ELEM_CHARGE*B - PROTON_G_MINUS_2*ELEM_CHARGE*B*proton_spin)
@@ -120,21 +122,21 @@ function cross_section_integrand(channel, k_zp_tilde, k_ze_tilde, n_p, n_e, mu_n
     # Fermi-Dirac factors, ignoring final state blocking for the electron
     if channel == "n"
         if blocking
-            fermi_dirac_factors = fermi_dirac((E_e+E_p-k_nu-mu_n)/T) * fermi_dirac((-E_p+mu_p)/T) * fermi_dirac((-E_e+mu_e)/T)
+            fermi_dirac_factors = fermi_dirac_simple((E_e+E_p-k_nu-mu_n)/T) * fermi_dirac_simple((-E_p+mu_p)/T) * fermi_dirac_simple((-E_e+mu_e)/T)
         else
-            fermi_dirac_factors = fermi_dirac((E_e+E_p-k_nu-mu_n)/T)
+            fermi_dirac_factors = fermi_dirac_simple((E_e+E_p-k_nu-mu_n)/T)
         end
     elseif channel == "p"
         if blocking
-            fermi_dirac_factors = fermi_dirac((E_e-E_p-k_nu+mu_n)/T) * fermi_dirac((E_p-mu_p)/T) * fermi_dirac((-E_e-mu_e)/T)
+            fermi_dirac_factors = fermi_dirac_simple((E_e-E_p-k_nu+mu_n)/T) * fermi_dirac_simple((E_p-mu_p)/T) * fermi_dirac_simple((-E_e-mu_e)/T)
         else
-            fermi_dirac_factors = fermi_dirac((E_p-mu_p)/T)
+            fermi_dirac_factors = fermi_dirac_simple((E_p-mu_p)/T)
         end
     else
         @error "cross_section_integrand: cross_section integrand channel not properly set as 'n' or 'p'"
     end
         
-    sign_sum = cross_section_sign_sum(channel, neutron_spin, proton_spin, n_p, n_e, k_n, E_e, k_zp, k_ze, k_nu, cos_θnu, B)
+    sign_sum = cross_section_sign_sum(channel, neutron_spin, proton_spin, n_p, n_e, k_n, E_e, k_zp, k_ze, k_nu, cos_theta_nu, B)
 
     # Magic factor of 2 to match DQ
     2 * E_n*fermi_dirac_factors*sign_sum
@@ -142,15 +144,15 @@ end
 
 
 """
-    cross_section_integral(channel, n_p, n_e, mu_n, mu_p, mu_e, k_nu, cos_θnu, neutron_spin, proton_spin, B, T)
+    cross_section_integral(channel, n_p, n_e, mu_n, mu_p, mu_e, k_nu, cos_theta_nu, neutron_spin, proton_spin, B, T)
 
 Compute the integrand for the cross-section calculation.
 """
-function cross_section_integral(channel, n_p, n_e, mu_n, mu_p, mu_e, k_nu, cos_θnu, neutron_spin, proton_spin, B, T, blocking, evals)
+function cross_section_integral(channel, n_p, n_e, mu_n, mu_p, mu_e, k_nu, cos_theta_nu, neutron_spin, proton_spin, B, T, blocking, evals)
     kzp_tilde_bounds, kze_tilde_bounds = _bound_kz_tilde_cross_section(n_p, n_e, k_nu, proton_spin, B, T, mu_p, mu_e)
 
     integrand_func_wrapper(kz_tilde_vec) = cross_section_integrand(channel, kz_tilde_vec[1], kz_tilde_vec[2], n_p, n_e, mu_n,
-                                                mu_p, mu_e, k_nu, cos_θnu, neutron_spin, proton_spin, B, T, blocking)
+                                                mu_p, mu_e, k_nu, cos_theta_nu, neutron_spin, proton_spin, B, T, blocking)
     
     integral_result, _ = hcubature(integrand_func_wrapper, (kzp_tilde_bounds[1], kze_tilde_bounds[1]), 
         (kzp_tilde_bounds[2], kze_tilde_bounds[2]); maxevals=evals) # huge number of maxevals so the integral actually works
@@ -159,11 +161,11 @@ end
 
 
 """
-    cross_section(channel, n_B, Y_e, k_nu, cos_θnu, B, T)
+    cross_section(channel, n_B, Y_e, k_nu, cos_theta_nu, B, T)
 
 Compute the integrand for the cross-section calculation.
 """
-function cross_section(channel, n_B, Y_e, k_nu, cos_θnu, B, T; blocking = true, evals = 50000)
+function cross_section(channel, n_B, Y_e, k_nu, cos_theta_nu, B, T; blocking = true, evals = 50000)
     B_MeV2 = B * GAUSS_TO_MEV2
     prefactor = (G_F^2 * COS2_CABIBBO_ANGLE * ELEM_CHARGE * B_MeV2 * T^2) / (64*pi^3)
 
@@ -186,10 +188,10 @@ function cross_section(channel, n_B, Y_e, k_nu, cos_θnu, B, T; blocking = true,
     for neutron_spin in (-0.5, 0.5), proton_spin in (-0.5, 0.5)
         for n_e in 0:n_max_e
             for n_p_up in 0:n_max_p_up
-                landau_sum += cross_section_integral(channel, n_p_up, n_e, mu_n, mu_p, mu_e, k_nu, cos_θnu, neutron_spin, proton_spin, B_MeV2, T, blocking, evals)
+                landau_sum += cross_section_integral(channel, n_p_up, n_e, mu_n, mu_p, mu_e, k_nu, cos_theta_nu, neutron_spin, proton_spin, B_MeV2, T, blocking, evals)
             end
             for n_p_down in 0:n_max_p_down
-                landau_sum += cross_section_integral(channel, n_p_down, n_e, mu_n, mu_p, mu_e, k_nu, cos_θnu, neutron_spin, proton_spin, B_MeV2, T, blocking, evals)
+                landau_sum += cross_section_integral(channel, n_p_down, n_e, mu_n, mu_p, mu_e, k_nu, cos_theta_nu, neutron_spin, proton_spin, B_MeV2, T, blocking, evals)
             end
         end
     end
